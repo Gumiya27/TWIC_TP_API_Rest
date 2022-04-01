@@ -1,8 +1,8 @@
 package com.dao;
 
-
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -15,78 +15,192 @@ import com.dto.Ville;
 
 @Repository
 public class VilleDAO {
-	
-	
+
 	Connection connexion;
-	
+
 	public static Connection getConnection() throws SQLException {
-        Connection c = DriverManager.getConnection("jdbc:mysql://localhost:3306/twic", "root", "");
-        return c; 
-    }
-	
+		Connection c = DriverManager.getConnection("jdbc:mysql://localhost:3306/twic", "root", "");
+		return c;
+	}
+
 	public static List<Ville> recupererVilles() {
-        List<Ville> villes = new ArrayList<Ville>();
-        Statement statement = null;
-        ResultSet resultat = null;
-        Connection connexion = null;
-        try {
-        	connexion = getConnection();
-            statement = connexion.createStatement();
+		List<Ville> villes = new ArrayList<Ville>();
+		Statement statement = null;
+		ResultSet resultat = null;
+		Connection connexion = null;
+		try {
+			connexion = getConnection();
+			statement = connexion.createStatement();
 
-            // Exécution de la requête
-            resultat = statement.executeQuery("SELECT * FROM ville_france order by Nom_commune ASC;");
-            
-            // Récupération des données
-            while (resultat.next()) {
-            	String code = resultat.getString("Code_commune_INSEE");
-                String nom = resultat.getString("Nom_commune");
-                String codePostal = resultat.getString("Code_Postal");
-                String libelle = resultat.getString("Libelle_acheminement");
-                String ligne5 = resultat.getString("Ligne_5");
-                String latitude = resultat.getString("Latitude");
-                String longitude = resultat.getString("Longitude");
-                villes.add(new Ville(code, nom, codePostal, libelle, ligne5, latitude, longitude));
-            }
-        } catch (SQLException e) {
-        } finally {
-            // Fermeture de la connexion
-            try {
-                if (resultat != null)
-                    resultat.close();
-                if (statement != null)
-                    statement.close();
-                if (connexion != null)
-                    connexion.close();
-            } catch (SQLException ignore) {
-            }
-        }
-        
-        return villes;
-    }
-	
-	/*
-	@Autowired
-	private static JdbcTemplate jdbcTemplate;
-	
-	@Autowired
-	public void setDataSource(DataSource dataSource) {
-        this.jdbcTemplate = new JdbcTemplate(dataSource);
-    }
-	
-	public static int getNBVilles() {
-	    return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM ville_france;", Integer.class);
-	  }
+			// Exécution de la requête
+			resultat = statement.executeQuery("SELECT * FROM ville_france order by Code_commune_INSEE ASC;");
 
-	public static List<String> getVilles() {
-		List<String> liste = jdbcTemplate.query("SELECT Nom_commune FROM ville_france;", new VilleMapper());
-		return liste;
+			// Récupération des données
+			while (resultat.next()) {
+				String code = resultat.getString("Code_commune_INSEE");
+				String nom = resultat.getString("Nom_commune");
+				String codePostal = resultat.getString("Code_Postal");
+				String libelle = resultat.getString("Libelle_acheminement");
+				String ligne5 = resultat.getString("Ligne_5");
+				String latitude = resultat.getString("Latitude");
+				String longitude = resultat.getString("Longitude");
+				villes.add(new Ville(code, nom, codePostal, libelle, ligne5, latitude, longitude));
+			}
+		} catch (SQLException e) {
+		} finally {
+			// Fermeture de la connexion
+			try {
+				if (resultat != null)
+					resultat.close();
+				if (statement != null)
+					statement.close();
+				if (connexion != null)
+					connexion.close();
+			} catch (SQLException ignore) {
+			}
+		}
+
+		return villes;
 	}
 
-	public static void addVille() {
-		String sql = "INSERT INTO `ville_france` (`Code_commune_INSEE`, `Nom_commune`, `Code_postal`, `Libelle_acheminement`, `Ligne_5`, `Latitude`, `Longitude`)"
-					+ " VALUES ('9999', 'TEST', '99999', 'TEST', '', '0', '0');";
-		jdbcTemplate.batchUpdate(sql);
-	}
-	*/
+	public static List<Ville> recupererVilleCode(String codePostal) {
+		List<Ville> villes = new ArrayList<Ville>();
+		Statement statement = null;
+		ResultSet resultat = null;
+		Connection connexion = null;
+		try {
+			connexion = getConnection();
+			statement = connexion.createStatement();
 
+			// Exécution de la requête
+			resultat = statement.executeQuery(
+					"SELECT * FROM ville_france WHERE Code_postal = '" + codePostal + "' order by Nom_commune ASC;");
+
+			// Récupération des données
+			while (resultat.next()) {
+				String code = resultat.getString("Code_commune_INSEE");
+				String nom = resultat.getString("Nom_commune");
+				String libelle = resultat.getString("Libelle_acheminement");
+				String ligne5 = resultat.getString("Ligne_5");
+				String latitude = resultat.getString("Latitude");
+				String longitude = resultat.getString("Longitude");
+				villes.add(new Ville(code, nom, codePostal, libelle, ligne5, latitude, longitude));
+			}
+		} catch (SQLException e) {
+		} finally {
+			// Fermeture de la connexion
+			try {
+				if (resultat != null)
+					resultat.close();
+				if (statement != null)
+					statement.close();
+				if (connexion != null)
+					connexion.close();
+			} catch (SQLException ignore) {
+			}
+		}
+
+		return villes;
+	}
+
+	public static String AjouterVille(Ville ville) {
+		Connection connexion = null;
+		String etatFinal = "Echec";
+		try {
+			connexion = getConnection();
+			PreparedStatement preparedStatement = connexion
+					.prepareStatement("INSERT INTO ville_france VALUES (?, ?, ?, ?, ?, ?, ?);");
+			preparedStatement.setString(1, ville.getCode());
+			preparedStatement.setString(2, ville.getNom());
+			preparedStatement.setString(3, ville.getCodePostal());
+			preparedStatement.setString(4, ville.getLibelle());
+			preparedStatement.setString(5, ville.getLigne5());
+			preparedStatement.setString(6, ville.getCoord().getLatitude());
+			preparedStatement.setString(7, ville.getCoord().getLatitude());
+			// Permet d'ajouter la date actuelle
+			preparedStatement.executeUpdate();
+			etatFinal = "Ville ajoutée";
+
+		} catch (SQLException e) {
+		} finally {
+			// Fermeture de la connexion
+			try {
+				if (connexion != null)
+					connexion.close();
+			} catch (SQLException ignore) {
+			}
+		}
+
+		return etatFinal;
+	}
+
+	public static String ModifierVille(Ville ville) {
+		Connection connexion = null;
+		String etatFinal = "Echec de modification";
+		try {
+			connexion = getConnection();
+			PreparedStatement preparedStatement = connexion.prepareStatement(
+					"UPDATE ville_france SET Nom_commune = ?, Code_postal = ?,"
+					+ " Libelle_acheminement = ?, Ligne_5 = ?, Latitude = ?, Longitude = ? "
+					+ " WHERE ville_france.Code_commune_INSEE = ? ;");
+			
+			preparedStatement.setString(1, ville.getNom());
+			preparedStatement.setString(2, ville.getCodePostal());
+			preparedStatement.setString(3, ville.getLibelle());
+			preparedStatement.setString(4, ville.getLigne5());
+			preparedStatement.setString(5, ville.getCoord().getLatitude());
+			preparedStatement.setString(6, ville.getCoord().getLatitude());
+			preparedStatement.setString(7, ville.getCode());
+			// Permet d'ajouter la date actuelle
+			preparedStatement.executeUpdate();
+			etatFinal = "Ville Modifiée";
+
+		} catch (SQLException e) {
+		} finally {
+			// Fermeture de la connexion
+			try {
+				if (connexion != null)
+					connexion.close();
+			} catch (SQLException ignore) {
+			}
+		}
+
+		return etatFinal;
+	}
+
+	public static boolean villePresente(Ville ville) {
+		boolean resultat = false;
+		List<Ville> villes = recupererVilles();
+		for (Ville v : villes) {
+			if (v.getCode().equals(ville.getCode())) {
+				resultat = true;
+			}
+		}
+		return resultat;
+	}
+
+	public static String SupprimerVilleAvecCode(String code) {
+		Connection connexion = null;
+		String etatFinal = "Echec";
+		try {
+			connexion = getConnection();
+			PreparedStatement preparedStatement = connexion
+					.prepareStatement("DELETE FROM ville_france WHERE Code_commune_INSEE = ?;");
+			preparedStatement.setInt(1, Integer.parseInt(code));
+			// Permet d'ajouter la date actuelle
+			preparedStatement.executeUpdate();
+			etatFinal = "Ville Supprimée";
+
+		} catch (SQLException e) {
+		} finally {
+			// Fermeture de la connexion
+			try {
+				if (connexion != null)
+					connexion.close();
+			} catch (SQLException ignore) {
+			}
+		}
+
+		return etatFinal;
+	}
 }
